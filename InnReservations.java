@@ -20,7 +20,7 @@ public class InnReservations {
       System.out.println("\tRe[servation]: Reserve a room.");
       System.out.println("\tC[hange] reservation: Make changes to a reservation.");
       System.out.println("\tCa[ncel] reservation: Cancel your reservation.");
-      System.out.println("\tFind Reservations: Find reservations that match a query.");
+      System.out.println("\tF[ind] Reservations: Find reservations that match a query.");
       
       Scanner sc = new Scanner(System.in);
    }
