@@ -24,22 +24,43 @@ public class Requirements {
 								   System.getenv("HP_JDBC_USER"),
 								   System.getenv("HP_JDBC_PW"))) {
 		    // Step 2: Construct SQL statement
-		    String sql = "SELECT * FROM lab7_rooms";
+			StringBuilder sb = new StringBuilder("select pop.room, Popularity, NextAvailableDate from ");
+			sb.append("(select room, round (sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
+			sb.append("from lab7_rooms as r ");
+			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
+			sb.append("where DATEDIFF(CURDATE(), checkin) < 180 and DATEDIFF(CURDATE(), checkin) > 0 ");
+			sb.append("group by room) pop ");
+			sb.append("inner join ");
+			sb.append("(select room, min(checkout) as NextAvailableDate ");
+			sb.append("from lab7_rooms as r ");
+			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
+			sb.append("where checkout >= curdate() ");
+			sb.append("group by room) ava ");
+			sb.append("on pop.room = ava.room;");
 
 		    // Step 3: (omitted in this example) Start transaction
 
 		    // Step 4: Send SQL statement to DBMS
-		   try (Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql)) {
+		    try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+		    	try(ResultSet rs = pstmt.executeQuery()) {
 
-            // Step 5: Receive results
-            while (rs.next()) {
-			
-            }
-		   }
+				// Step 5: Receive results
+				while (rs.next()) {
+					String RoomCode = rs.getString("RoomCode");
+					String RoomName = rs.getString("RoomName");
+					int Beds = rs.getInt("Beds");
+					String bedType = rs.getString("bedType");
+					int maxOcc = rs.getInt("maxOcc");
+					float basePrice = rs.getFloat("basePrice");
+					String decor = rs.getString("decor");
+					int Popularity = rs.getInt("Popularity");
+					String NextDateAvailable = rs.getString("NextDateAvailable");
+					System.out.format("%s %s %d %s %d %f %s %d %s", RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
+				}
+		    }
 
 		}
-
+		}
 	}
    
    public void requirement2() throws SQLException {
