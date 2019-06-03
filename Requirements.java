@@ -24,7 +24,7 @@ public class Requirements {
 								   System.getenv("HP_JDBC_USER"),
 								   System.getenv("HP_JDBC_PW"))) {
 		    // Step 2: Construct SQL statement
-		    String sql = "SELECT * FROM lab7_rooms";
+		    String sql = "SELECT * FROM lab7_rooms INNER JOIN lab7_reservations ON RoomCode = Room";
 
 		    // Step 3: (omitted in this example) Start transaction
 
@@ -34,7 +34,16 @@ public class Requirements {
 
 			// Step 5: Receive results
 			while (rs.next()) {
-			
+				String RoomCode = rs.getString("RoomCode");
+				String RoomName = rs.getString("RoomName");
+				int Beds = rs.getInt("Beds");
+				String bedType = rs.getString("bedType");
+				int maxOcc = rs.getInt("maxOcc");
+				float basePrice = rs.getFloat("basePrice");
+				String decor = rs.getString("decor");
+				int Popularity = rs.getInt("Popularity");
+				String NextDateAvailable = rs.getString("NextDateAvailable");
+				System.out.format("%s %s %i %s %i %f %s %i %s", RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
 			}
 		    }
 
