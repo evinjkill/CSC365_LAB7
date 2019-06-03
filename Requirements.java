@@ -77,7 +77,7 @@ public class Requirements {
          List<Object> params = new ArrayList<Object>();
          params.addAll(endDate, startDate, occupancy);
          StringBuilder sb = new StringBuilder("SELECT * FROM lab7_rooms JOIN lab7_reservations ON roomcode = room");
-         sb.append(" WHERE checkin <= ? AND checkout >= ? AND maxOcc >= (?)");
+         sb.append(" WHERE checkin <= ? AND checkout >= ? AND maxOcc >= ?");
          
          if (!"any".equalsIgnoreCase(roomCode)) {
             sb.append(" AND roomcode = ?");
@@ -97,7 +97,7 @@ public class Requirements {
             
             try (ResultSet rs = pstmt.executeQuery()) {
                
-               System.out.println("Matching Pastries:");
+               System.out.println("Matching Rooms:");
                int matchCount = 0;
                
                while (rs.next()) {
