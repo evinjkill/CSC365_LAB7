@@ -101,7 +101,7 @@ public class Requirements {
          params.add(occupancy);
          //StringBuilder sb = new StringBuilder("SELECT * FROM lab7_rooms JOIN lab7_reservations ON roomcode = room");
          //sb.append(" WHERE checkin <= ? AND checkout >= ? AND maxOcc >= ?");
-         String query = "SELECT * FROM lab7_rooms WHERE roomcode NOT IN (SELECT roomcode FROM lab7_rooms";
+         String query = "SELECT * FROM lab7_rooms WHERE roomcode NOT IN (SELECT DISTINCT roomcode FROM lab7_rooms";
          query += "JOIN lab7_reservations ON roomcode = room WHERE checkin <= ? AND checkout >= ? and maxOcc >= ?";
          StringBuilder sb = new StringBuilder(query);
 
