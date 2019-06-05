@@ -24,6 +24,7 @@ public class InnReservations {
       System.out.println("\tC[hange] reservation: Make changes to a reservation.");
       System.out.println("\tCa[ncel] reservation: Cancel your reservation.");
       System.out.println("\tF[ind] Reservations: Find reservations that match a query.");
+      System.out.print("\tOption: ");
       
       String option = sc.nextLine();
       Requirements req = new Requirements();
