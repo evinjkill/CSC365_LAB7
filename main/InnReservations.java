@@ -30,6 +30,15 @@ public class InnReservations {
 
       if (option.equalsIgnoreCase("R") || option.equalsIgnoreCase("Room")) {
          try {
+            req.requirement1();
+         }
+         catch (SQLException e) {
+            System.err.println("SQLException: " + e.getMessage());
+         }
+      }
+
+      else if (option.equalsIgnoreCase("Re") || option.equalsIgnoreCase("Reservation")) {
+         try {
             req.requirement2();
          }
          catch (SQLException e) {
