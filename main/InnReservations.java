@@ -24,6 +24,7 @@ public class InnReservations {
       System.out.println("\tC[hange] reservation: Make changes to a reservation.");
       System.out.println("\tCa[ncel] reservation: Cancel your reservation.");
       System.out.println("\tF[ind] Reservations: Find reservations that match a query.");
+      System.out.println("\tQ[uit]")
       System.out.print("\tOption: ");
       
       String option = sc.nextLine();
@@ -46,6 +47,10 @@ public class InnReservations {
          catch (SQLException e) {
             System.err.println("SQLException: " + e.getMessage());
          }
+      }
+      
+      else if (option.equalsIgnoreCase("Q") || option.equalsIgnoreCase("Quit")) {
+         System.exit(0);
       }
    }
 }
