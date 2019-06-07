@@ -29,6 +29,7 @@ public class InnReservations {
       String option = sc.nextLine();
       Requirements req = new Requirements();
 
+      System.out.println();
       if (option.equalsIgnoreCase("R") || option.equalsIgnoreCase("Room")) {
          try {
             req.requirement1();
