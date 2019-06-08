@@ -18,6 +18,11 @@ import java.time.LocalDate;
 import java.time.DayOfWeek;
 
 public class Requirements {
+   
+   private static String
+         ADD_ONE_STR = "Add 1 Week",
+         ADD_TWO_STR = "Add 2 Weeks",
+         SAME_BED_STR = "Same Bed";
 	
 	public void requirement1() throws SQLException {
 
@@ -93,40 +98,50 @@ public class Requirements {
          // start transaction
          conn.setAutoCommit(false);
          
+         ArrayList<Room> availRooms = execute_query(conn, r2, sb.toString(), params);
+         if (availRooms.empty()) {
+            params.clear();
+            String query = create_advanced_query(r2, params);
+            availRooms = execute_query(conn, r2, query, params);
+         }
+            execute_smart_query(conn);
+         
          try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
             int i = 1;
             for (Object p : params) {
                pstmt.setObject(i++, p);
             }
             
+            ArrayList<Room> availRooms = new ArrayList<>();
+            // Try finding any matching room
             try (ResultSet rs = pstmt.executeQuery()) {
                Scanner sc = new Scanner(System.in);
-
                System.out.println("Matching Rooms:");
-               ArrayList<Room> availRooms = new ArrayList<>();
                get_available_rooms(rs, r2, availRooms);
-               
-               if (availRooms.size() == 0) {
-                  System.out.println("No matches found!");
-                  find_similar_types(r2);
-               }
-               
-               System.out.print("Select a room by option number (or 0 to cancel): ");
-               int option = Integer.valueOf(sc.nextLine());
+            }
+            
+            // if no matching rooms found, try an advanced query
+            if (availRooms.size() == 0) {
+               System.out.println("No matches found!");
+               System.out.println("Performing advanced search...");
+               String query = create_advanced_query(r2, params);
+            }
+            
+            System.out.print("Select a room by option number (or 0 to cancel): ");
+            int option = Integer.valueOf(sc.nextLine());
 
-               if (option == 0) return;
-               
-               Room r = availRooms.get(option - 1);
-               System.out.printf("Confirm reservation: %n" +
-                  "%s %s%nRoom: %s (%s), bed: %s%nCheck in: %s, Check out: %s%nAdults: %d, Children: %d%nTotal Cost: %.2f" +
-                  "%n[y/n]: ",
-                     r2.firstName, r2.lastName, r.getRoomCode(), r.getRoomName(), r.getBedType(),
-                     r2.startDate, r2.endDate, r2.numAdults, r2.numChildren,
-                     total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
+            if (option == 0) return;
+            
+            Room r = availRooms.get(option - 1);
+            System.out.printf("Confirm reservation: %n" +
+               "%s %s%nRoom: %s (%s), bed: %s%nCheck in: %s, Check out: %s%nAdults: %d, Children: %d%nTotal Cost: %.2f" +
+               "%n[y/n]: ",
+                  r2.firstName, r2.lastName, r.getRoomCode(), r.getRoomName(), r.getBedType(),
+                  r2.startDate, r2.endDate, r2.numAdults, r2.numChildren,
+                  total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
 
-               if ("y".equalsIgnoreCase(sc.nextLine())) {
-                  reserve_room(r2, r, conn);
-               }
+            if ("y".equalsIgnoreCase(sc.nextLine())) {
+               reserve_room(r2, r, conn);
             }
 
             conn.commit();
@@ -137,6 +152,27 @@ public class Requirements {
       }
    }
    
+   // returns true if any rooms were found
+   private void execute_query(Connection conn, R2Query r2, String query, List<Object> params) throws SQLException {
+      ArrayList<Room> availRooms = new ArrayList<>();
+      
+      try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+         int i = 1;
+         for (Object p : params) {
+            pstmt.setObject(i++, p);
+         }
+         
+         // Try finding any matching room
+         try (ResultSet rs = pstmt.executeQuery()) {
+            Scanner sc = new Scanner(System.in);
+            System.out.println("Matching Rooms:");
+            get_available_rooms(rs, r2, availRooms);
+         }
+      }
+      
+      return availRooms;
+   }
+   
    private void get_available_rooms(ResultSet rs, R2Query r2, List<Room> availRooms) throws SQLException {
       int matchCount = 0;
       
@@ -145,9 +181,10 @@ public class Requirements {
             System.out.format("   %s %s %n", rs.getString("roomcode"), " room size exceeded");
          }
          else {
-            Room r = new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
-                              rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
-                              rs.getString("decor"));
+            Room r =
+               new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
+                        rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
+                        rs.getString("decor"));
             availRooms.add(r);
             System.out.format("%d: %s %n", matchCount + 1, rs.getString("roomcode"));
             matchCount++;
@@ -226,8 +263,50 @@ public class Requirements {
       return cost;
    }
 
-   private void find_similar_types(R2Query r2) {
-      // This will create a more intelligent search that includes similar rooms
+   private String create_advanced_query(R2Query r2, List<Object> params) {
+      // This will create a more intelligent search that includes similar
+      StringBuilder sb = new StringBuilder();
+      
+      // Finds all rooms available in 1 week (or just the requested one)
+      String searchAddOneWeek = "SELECT *, " + ADD_ONE_STR + "SearchMethod FROM lab7_rooms" +
+         "WHERE roomcode NOT IN (" +
+         "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
+         " WHERE checkin <= DATE_ADD(?, INTERVAL 7 DAY) AND checkout >= DATE_ADD(?, INTERVAL 7 DAY))";
+      params.add(r2.endDate);
+      params.add(r2.startDate);
+      
+      sb.append(searchAddOneWeek);
+      if (!"any".equalsIgnoreCase(r2.roomCode)) {
+         params.add(r2.roomCode);
+         sb.append(" AND roomcode = ?");
+      }
+      
+      // Finds all rooms available in 2 weeks (or just the requested one)
+      String searchAddTwoWeek = "SELECT *, " + ADD_TWO_STR + "SearchMethod FROM lab7_rooms" +
+      "WHERE roomcode NOT IN (" +
+         "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
+         " WHERE checkin <= DATE_ADD(?, INTERVAL 14 DAY) AND checkout >= DATE_ADD(?, INTERVAL 14 DAY))";
+      params.add(r2.endDate);
+      params.add(r2.startDate);
+         
+      sb.append(searchAddTwoWeek);
+      if (!"any".equalsIgnoreCase(r2.roomcode)) {
+         params.add(r2.roomCode);
+         sb.append(" AND roomcode = ?");
+      }
+      
+      if (!"any".equalsIgnoreCase(r2.bedType)) {
+         // Finds same date rooms that match the bed type
+         String searchMatchDecor = "SELECT *, " + SAME_BED_STR + "SearchMethod FROM lab7_rooms" +
+            "WHERE roomcode NOT IN (" +
+            "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
+            " WHERE checkin <= ? AND checkout >= ?) AND bedtype = ?";
+         params.add(r2.endDate);
+         params.add(r2.startDate);
+         params.add(r2.bedType);
+      }
+      
+      return sb.toString();
    }
 
    private static class R2Query {
