@@ -22,6 +22,7 @@ public class Requirements {
    private static String
          ADD_ONE_STR = "Add 1 Week",
          ADD_TWO_STR = "Add 2 Weeks",
+         SAME_DATE_STR = "Same Date",
          SAME_BED_STR = "Same Bed";
 	
 	public void requirement1() throws SQLException {
@@ -108,9 +109,15 @@ public class Requirements {
                params.clear();
                String query = create_advanced_query(r2, params);
                availRooms = execute_query(conn, r2, query, params);
+
+               if (availRooms.isEmpty()) {
+                  System.out.println("No matches found!");
+                  return;
+               }
             }
                
             System.out.print("Select a room by option number (or 0 to cancel): ");
+            Scanner sc = new Scanner(System.in);
             int option = Integer.valueOf(sc.nextLine());
 
             if (option == 0) return;
@@ -131,6 +138,7 @@ public class Requirements {
          }
          catch (SQLException e) {
             conn.rollback();
+            System.err.println("SQLException: " + e.getMessage());
          }
       }
    }
@@ -148,7 +156,7 @@ public class Requirements {
          // Try finding any matching room
          try (ResultSet rs = pstmt.executeQuery()) {
             Scanner sc = new Scanner(System.in);
-            System.out.println("Matching Rooms:");
+            System.out.println("\nMatching Rooms:");
             get_available_rooms(rs, r2, availRooms);
          }
       }
@@ -251,8 +259,8 @@ public class Requirements {
       StringBuilder sb = new StringBuilder();
       
       // Finds all rooms available in 1 week (or just the requested one)
-      String searchAddOneWeek = "SELECT *, " + ADD_ONE_STR + "SearchMethod FROM lab7_rooms" +
-         "WHERE roomcode NOT IN (" +
+      String searchAddOneWeek = "SELECT *, " + "'" + ADD_ONE_STR + "'" + " SearchMethod FROM lab7_rooms" +
+         " WHERE roomcode NOT IN (" +
          "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
          " WHERE checkin <= DATE_ADD(?, INTERVAL 7 DAY) AND checkout >= DATE_ADD(?, INTERVAL 7 DAY))";
       params.add(r2.endDate);
@@ -263,30 +271,48 @@ public class Requirements {
          params.add(r2.roomCode);
          sb.append(" AND roomcode = ?");
       }
+
+      sb.append(" UNION ");
       
       // Finds all rooms available in 2 weeks (or just the requested one)
-      String searchAddTwoWeek = "SELECT *, " + ADD_TWO_STR + "SearchMethod FROM lab7_rooms" +
-      "WHERE roomcode NOT IN (" +
+      String searchAddTwoWeek = "SELECT *, " + "'" + ADD_TWO_STR + "'" + " SearchMethod FROM lab7_rooms" +
+      " WHERE roomcode NOT IN (" +
          "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
          " WHERE checkin <= DATE_ADD(?, INTERVAL 14 DAY) AND checkout >= DATE_ADD(?, INTERVAL 14 DAY))";
       params.add(r2.endDate);
       params.add(r2.startDate);
          
       sb.append(searchAddTwoWeek);
-      if (!"any".equalsIgnoreCase(r2.roomcode)) {
+      if (!"any".equalsIgnoreCase(r2.roomCode)) {
          params.add(r2.roomCode);
          sb.append(" AND roomcode = ?");
       }
       
-      if (!"any".equalsIgnoreCase(r2.bedType)) {
+      // Expanding roomcode search takes precedence over bed type
+      if (!"any".equalsIgnoreCase(r2.roomCode)) {
+         // Finds all same date rooms
+         String searchMatchSame = "SELECT *, " + "'" + SAME_DATE_STR + "'" + " SearchMethod FROM lab7_rooms" +
+            " WHERE roomcode NOT IN (" +
+            "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
+            " WHERE checkin <= ? AND checkout >= ?)";
+         params.add(r2.endDate);
+         params.add(r2.startDate);
+
+         sb.append(" UNION ");
+         sb.append(searchMatchSame);
+      }
+      else if (!"any".equalsIgnoreCase(r2.bedType)) {
          // Finds same date rooms that match the bed type
-         String searchMatchDecor = "SELECT *, " + SAME_BED_STR + "SearchMethod FROM lab7_rooms" +
-            "WHERE roomcode NOT IN (" +
+         String searchMatchBed = "SELECT *, " + "'" + SAME_BED_STR + "'" + " SearchMethod FROM lab7_rooms" +
+            " WHERE roomcode NOT IN (" +
             "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
             " WHERE checkin <= ? AND checkout >= ?) AND bedtype = ?";
          params.add(r2.endDate);
          params.add(r2.startDate);
          params.add(r2.bedType);
+
+         sb.append(" UNION ");
+         sb.append(searchMatchBed);
       }
       
       return sb.toString();
