@@ -98,62 +98,44 @@ public class Requirements {
          // start transaction
          conn.setAutoCommit(false);
          
-         ArrayList<Room> availRooms = execute_query(conn, r2, sb.toString(), params);
-         if (availRooms.empty()) {
+         // Try finding any matching room
+         List<Room> availRooms = execute_query(conn, r2, sb.toString(), params);
+         // if no matching rooms found, try an advanced query
+         if (availRooms.isEmpty()) {
+            System.out.println("No matches found!");
+            System.out.println("Performing advanced search...");
             params.clear();
             String query = create_advanced_query(r2, params);
             availRooms = execute_query(conn, r2, query, params);
          }
-            execute_smart_query(conn);
-         
-         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
-            int i = 1;
-            for (Object p : params) {
-               pstmt.setObject(i++, p);
-            }
             
-            ArrayList<Room> availRooms = new ArrayList<>();
-            // Try finding any matching room
-            try (ResultSet rs = pstmt.executeQuery()) {
-               Scanner sc = new Scanner(System.in);
-               System.out.println("Matching Rooms:");
-               get_available_rooms(rs, r2, availRooms);
-            }
-            
-            // if no matching rooms found, try an advanced query
-            if (availRooms.size() == 0) {
-               System.out.println("No matches found!");
-               System.out.println("Performing advanced search...");
-               String query = create_advanced_query(r2, params);
-            }
-            
-            System.out.print("Select a room by option number (or 0 to cancel): ");
-            int option = Integer.valueOf(sc.nextLine());
+         System.out.print("Select a room by option number (or 0 to cancel): ");
+         int option = Integer.valueOf(sc.nextLine());
 
-            if (option == 0) return;
+         if (option == 0) return;
             
-            Room r = availRooms.get(option - 1);
-            System.out.printf("Confirm reservation: %n" +
-               "%s %s%nRoom: %s (%s), bed: %s%nCheck in: %s, Check out: %s%nAdults: %d, Children: %d%nTotal Cost: %.2f" +
-               "%n[y/n]: ",
-                  r2.firstName, r2.lastName, r.getRoomCode(), r.getRoomName(), r.getBedType(),
-                  r2.startDate, r2.endDate, r2.numAdults, r2.numChildren,
-                  total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
+         Room r = availRooms.get(option - 1);
+         System.out.printf("Confirm reservation: %n" +
+            "%s %s%nRoom: %s (%s), bed: %s%nCheck in: %s, Check out: %s%nAdults: %d, Children: %d%nTotal Cost: %.2f" +
+            "%n[y/n]: ",
+               r2.firstName, r2.lastName, r.getRoomCode(), r.getRoomName(), r.getBedType(),
+               r2.startDate, r2.endDate, r2.numAdults, r2.numChildren,
+               total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
 
-            if ("y".equalsIgnoreCase(sc.nextLine())) {
-               reserve_room(r2, r, conn);
-            }
-
-            conn.commit();
+         if ("y".equalsIgnoreCase(sc.nextLine())) {
+            reserve_room(r2, r, conn);
          }
-         catch (SQLException e) {
-            conn.rollback();
-         }
+
+         conn.commit();
+      }
+      catch (SQLException e) {
+         conn.rollback();
+      }
       }
    }
    
    // returns true if any rooms were found
-   private void execute_query(Connection conn, R2Query r2, String query, List<Object> params) throws SQLException {
+   private List<Room> execute_query(Connection conn, R2Query r2, String query, List<Object> params) throws SQLException {
       ArrayList<Room> availRooms = new ArrayList<>();
       
       try (PreparedStatement pstmt = conn.prepareStatement(query)) {
