@@ -82,12 +82,12 @@ public class Requirements {
 
          if (!"any".equalsIgnoreCase(r2.bedType)) {
             sb.append(" AND bedType = ?");
-            params.add(bedType);
+            params.add(r2.bedType);
          }
 
          if (!"any".equalsIgnoreCase(r2.roomCode)) {
             sb.append(" AND roomcode = ?");
-            params.add(roomCode);
+            params.add(r2.roomCode);
          }
 
          // start transaction
@@ -100,16 +100,15 @@ public class Requirements {
             }
             
             try (ResultSet rs = pstmt.executeQuery()) {
-               
+               Scanner sc = new Scanner(System.in);
+
                System.out.println("Matching Rooms:");
-               int matchCount = 0;
                ArrayList<Room> availRooms = new ArrayList<>();
+               get_available_rooms(rs, r2, availRooms);
                
-               matchCount = get_available_rooms(rs, availRooms);
-               
-               if (matchCount == 0) {
+               if (availRooms.size() == 0) {
                   System.out.println("No matches found!");
-                  //rs = find_similar_types(roomCode, bedType, endDate, startDate, occupancy);
+                  find_similar_types(r2);
                }
                
                System.out.print("Select a room by option number (or 0 to cancel): ");
@@ -126,7 +125,7 @@ public class Requirements {
                      total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
 
                if ("y".equalsIgnoreCase(sc.nextLine())) {
-                  reserve_room(query, r2, r, conn);
+                  reserve_room(r2, r, conn);
                }
             }
 
@@ -138,7 +137,7 @@ public class Requirements {
       }
    }
    
-   private void get_available_rooms(ResultSet rs, List<Room> availRooms) {
+   private void get_available_rooms(ResultSet rs, R2Query r2, List<Room> availRooms) throws SQLException {
       int matchCount = 0;
       
       while (rs.next()) {
@@ -154,11 +153,9 @@ public class Requirements {
             matchCount++;
          }
       }
-      
-      return matchCount;
    }
 
-   private void reserve_room(String query, R2Query r2, Room room, Connection conn) {
+   private void reserve_room(R2Query r2, Room room, Connection conn) {
       String query = "INSERT INTO lab7_reservations (CODE, Room, CheckIn, Checkout, Rate, LastName," +
                      " FirstName, Adults, Kids) VALUES (?, ?, DATE(?), DATE(?), ?, ?, ?, ?, ?)";
                   
@@ -229,11 +226,8 @@ public class Requirements {
       return cost;
    }
 
-   private ResultSet find_similar_types(String roomCode, String bedType, String endDate,
-                                          String startDate, int occupancy) {
+   private void find_similar_types(R2Query r2) {
       // This will create a more intelligent search that includes similar rooms
-      // and returns the result set from the query
-      return null;
    }
 
    private static class R2Query {
@@ -285,32 +279,32 @@ public class Requirements {
       }
       
       private static boolean check_dates(String start, String end) {
-      String match = "\\d{4}-\\d{2}-\\d{2}";
-      if (!start.matches(match) || !end.matches(match))
-         return false;
-
-      String[] start_split = start.split("-");
-      String[] end_split = end.split("-");
-
-      int year_diff = Integer.valueOf(end_split[0]) - Integer.valueOf(start_split[0]);
-
-      if (year_diff < 0)
-         return false;
-      else if (year_diff == 0) {
-         int month_diff = Integer.valueOf(end_split[1]) - Integer.valueOf(start_split[1]);
-         
-         if (month_diff < 0)
+         String match = "\\d{4}-\\d{2}-\\d{2}";
+         if (!start.matches(match) || !end.matches(match))
             return false;
-         else if (month_diff == 0) {
-            int day_diff = Integer.valueOf(end_split[2]) - Integer.valueOf(start_split[2]);
 
-            if (day_diff < 0)
+         String[] start_split = start.split("-");
+         String[] end_split = end.split("-");
+
+         int year_diff = Integer.valueOf(end_split[0]) - Integer.valueOf(start_split[0]);
+
+         if (year_diff < 0)
+            return false;
+         else if (year_diff == 0) {
+            int month_diff = Integer.valueOf(end_split[1]) - Integer.valueOf(start_split[1]);
+         
+            if (month_diff < 0)
                return false;
-         }
-      }
+            else if (month_diff == 0) {
+               int day_diff = Integer.valueOf(end_split[2]) - Integer.valueOf(start_split[2]);
 
-      return true;
-   }
+               if (day_diff < 0)
+                  return false;
+            }
+         }
+
+         return true;
+      }
    }
 }
 
