@@ -12,7 +12,8 @@ import java.util.Scanner;
 public class InnReservations {
    
    public static void main(String[] args) {
-      main_menu();
+      while (true)
+         main_menu();
    }
    
    private static void main_menu() {
@@ -24,10 +25,13 @@ public class InnReservations {
       System.out.println("\tC[hange] reservation: Make changes to a reservation.");
       System.out.println("\tCa[ncel] reservation: Cancel your reservation.");
       System.out.println("\tF[ind] Reservations: Find reservations that match a query.");
+      System.out.println("\tQ[uit]");
+      System.out.print("\tOption: ");
       
       String option = sc.nextLine();
       Requirements req = new Requirements();
 
+      System.out.println();
       if (option.equalsIgnoreCase("R") || option.equalsIgnoreCase("Room")) {
          try {
             req.requirement1();
@@ -44,6 +48,10 @@ public class InnReservations {
          catch (SQLException e) {
             System.err.println("SQLException: " + e.getMessage());
          }
+      }
+      
+      else if (option.equalsIgnoreCase("Q") || option.equalsIgnoreCase("Quit")) {
+         System.exit(0);
       }
    }
 }
