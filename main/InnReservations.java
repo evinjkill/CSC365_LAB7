@@ -12,7 +12,8 @@ import java.util.Scanner;
 public class InnReservations {
    
    public static void main(String[] args) {
-      main_menu();
+      while (true)
+         main_menu();
    }
    
    private static void main_menu() {
