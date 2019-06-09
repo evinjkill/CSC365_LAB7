@@ -1,5 +1,7 @@
 package main;
 
+import java.time.LocalDate;
+
 public class Room {
    private String roomCode;
    private String roomName;
@@ -8,9 +10,12 @@ public class Room {
    private int maxOcc;
    private double basePrice;
    private String decor;
+
+   private String start;
+   private String end;
    
    public Room(String roomCode, String roomName, int beds, String bedType,
-               int maxOcc, double basePrice, String decor) {
+               int maxOcc, double basePrice, String decor, String start, String end) {
       this.roomCode = roomCode;
       this.roomName = roomName;
       this.beds = beds;
@@ -18,6 +23,25 @@ public class Room {
       this.maxOcc = maxOcc;
       this.basePrice = basePrice;
       this.decor = decor;
+      this.start = start;
+      this.end = end;
+   }
+
+   public void increaseResStartDay(int numDays) {
+      LocalDate sdate = LocalDate.parse(start);
+      LocalDate edate = LocalDate.parse(end);
+      sdate = sdate.plusDays(numDays);
+      edate = edate.plusDays(numDays);
+      start = sdate.toString();
+      end = edate.toString();
+   }
+
+   public String getStart() {
+      return start;
+   }
+
+   public String getEnd() {
+      return end;
    }
 
    public String getRoomCode() {

@@ -1,6 +1,7 @@
 package main;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -23,7 +24,8 @@ public class Requirements {
          ADD_ONE_STR = "Add 1 Week",
          ADD_TWO_STR = "Add 2 Weeks",
          SAME_DATE_STR = "Same Date",
-         SAME_BED_STR = "Same Bed";
+         SAME_BED_STR = "Same Bed",
+         SEARCH_METHOD = "SearchMethod";
 	
 	public void requirement1() throws SQLException {
 
@@ -116,7 +118,7 @@ public class Requirements {
                }
             }
                
-            System.out.print("Select a room by option number (or 0 to cancel): ");
+            System.out.print("\nSelect a room by option number (or 0 to cancel): ");
             Scanner sc = new Scanner(System.in);
             int option = Integer.valueOf(sc.nextLine());
 
@@ -127,8 +129,8 @@ public class Requirements {
                "%s %s%nRoom: %s (%s), bed: %s%nCheck in: %s, Check out: %s%nAdults: %d, Children: %d%nTotal Cost: %.2f" +
                "%n[y/n]: ",
                   r2.firstName, r2.lastName, r.getRoomCode(), r.getRoomName(), r.getBedType(),
-                  r2.startDate, r2.endDate, r2.numAdults, r2.numChildren,
-                  total_cost(r2.startDate, r2.endDate, r.getBasePrice()));
+                  r.getStart(), r.getEnd(), r2.numAdults, r2.numChildren,
+                  total_cost(r.getStart(), r.getEnd(), r.getBasePrice()));
 
             if ("y".equalsIgnoreCase(sc.nextLine())) {
                reserve_room(r2, r, conn);
@@ -157,13 +159,33 @@ public class Requirements {
          try (ResultSet rs = pstmt.executeQuery()) {
             Scanner sc = new Scanner(System.in);
             System.out.println("\nMatching Rooms:");
-            get_available_rooms(rs, r2, availRooms);
+
+            if (has_column(rs, SEARCH_METHOD))
+               get_adv_available_rooms(rs, r2, availRooms);
+            else
+               get_available_rooms(rs, r2, availRooms);
          }
       }
       
       return availRooms;
    }
+
+   private boolean has_column(ResultSet rs, String col_name) throws SQLException {
+      ResultSetMetaData rsmd = rs.getMetaData();
+      int columns = rsmd.getColumnCount();
+
+      for (int i = 1; i < columns; i++) {
+         if (col_name.equals(rsmd.getColumnName(i)))
+            System.out.println("true");
+            return true;
+      }
+      System.out.println("false");
+      return false;
+   }
    
+   /*
+    * Gets all available rooms based on the user's choices
+    */
    private void get_available_rooms(ResultSet rs, R2Query r2, List<Room> availRooms) throws SQLException {
       int matchCount = 0;
       
@@ -172,12 +194,41 @@ public class Requirements {
             System.out.format("   %s %s %n", rs.getString("roomcode"), " room size exceeded");
          }
          else {
-            Room r =
-               new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
-                        rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
-                        rs.getString("decor"));
+            Room r;
+
+            r = new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
+                           rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
+                           rs.getString("decor"), r2.startDate, r2.endDate);
+
             availRooms.add(r);
             System.out.format("%d: %s %n", matchCount + 1, rs.getString("roomcode"));
+            matchCount++;
+         }
+      }
+   }
+
+   /*
+    * Advanced query which takes into account that the reservation date can change
+    */
+   private void get_adv_available_rooms(ResultSet rs, R2Query r2, List<Room> availRooms) throws SQLException {
+      int matchCount = 0;
+
+      while (rs.next()) {
+         if (rs.getInt("maxocc") < (r2.numAdults + r2.numChildren))
+            System.out.format("   %s %s %n", rs.getString("roomcode"), " room size exceeded");
+         else {
+            Room r = new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
+                              rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
+                              rs.getString("decor"), r2.startDate, r2.endDate);
+
+            if (rs.getString(SEARCH_METHOD).equals(ADD_ONE_STR)) {
+               r.increaseResStartDay(7);
+            }
+            else if (rs.getString(SEARCH_METHOD).equals(ADD_TWO_STR)) {
+               r.increaseResStartDay(14);
+            }
+            availRooms.add(r);
+            System.out.format("%d: %s (%s to %s)%n", matchCount + 1, rs.getString("roomcode"), r.getStart(), r.getEnd());
             matchCount++;
          }
       }
@@ -190,8 +241,8 @@ public class Requirements {
       List<Object> params = new ArrayList<Object>();
       params.add(get_max_code(conn) + 1);
       params.add(room.getRoomCode());
-      params.add(r2.startDate);
-      params.add(r2.endDate);
+      params.add(room.getStart());
+      params.add(room.getEnd());
       params.add(room.getBasePrice());
       params.add(r2.lastName.toUpperCase());
       params.add(r2.firstName.toUpperCase());
@@ -254,6 +305,11 @@ public class Requirements {
       return cost;
    }
 
+   /*
+    * Creates an advanced query that looks for all rooms available
+    * at the requested time and 1 and 2 weeks ahead of the requested date.
+    * Also looks for any rooms with matching bed type
+    */
    private String create_advanced_query(R2Query r2, List<Object> params) {
       // This will create a more intelligent search that includes similar
       StringBuilder sb = new StringBuilder();
@@ -267,11 +323,6 @@ public class Requirements {
       params.add(r2.startDate);
       
       sb.append(searchAddOneWeek);
-      if (!"any".equalsIgnoreCase(r2.roomCode)) {
-         params.add(r2.roomCode);
-         sb.append(" AND roomcode = ?");
-      }
-
       sb.append(" UNION ");
       
       // Finds all rooms available in 2 weeks (or just the requested one)
@@ -283,10 +334,6 @@ public class Requirements {
       params.add(r2.startDate);
          
       sb.append(searchAddTwoWeek);
-      if (!"any".equalsIgnoreCase(r2.roomCode)) {
-         params.add(r2.roomCode);
-         sb.append(" AND roomcode = ?");
-      }
       
       // Expanding roomcode search takes precedence over bed type
       if (!"any".equalsIgnoreCase(r2.roomCode)) {
@@ -367,6 +414,7 @@ public class Requirements {
       }
       
       private static boolean check_dates(String start, String end) {
+         // confirm user input the correct date structure
          String match = "\\d{4}-\\d{2}-\\d{2}";
          if (!start.matches(match) || !end.matches(match))
             return false;
@@ -374,6 +422,7 @@ public class Requirements {
          String[] start_split = start.split("-");
          String[] end_split = end.split("-");
 
+         // check that the start date isn't after the end date
          int year_diff = Integer.valueOf(end_split[0]) - Integer.valueOf(start_split[0]);
 
          if (year_diff < 0)
