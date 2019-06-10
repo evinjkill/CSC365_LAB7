@@ -27,52 +27,76 @@ public class Requirements {
          SAME_BED_STR = "Same Bed",
          SEARCH_METHOD = "SearchMethod";
 	
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 1
+   *
+   ---------------------------------------------------------------------------*/
+
 	public void requirement1() throws SQLException {
 
 		// Step 1: Establish connection to RDBMS
-		try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
 								   System.getenv("HP_JDBC_USER"),
 								   System.getenv("HP_JDBC_PW"))) {
-		    // Step 2: Construct SQL statement
-			StringBuilder sb = new StringBuilder("select pop.room, Popularity, NextAvailableDate from ");
-			sb.append("(select room, round (sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
+         // Step 2: Construct SQL statement
+			StringBuilder sb = new StringBuilder("select pop.*, NextAvailableDate from ");
+			sb.append("(select r.*, round(sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where DATEDIFF(CURDATE(), checkin) < 180 and DATEDIFF(CURDATE(), checkin) > 0 ");
 			sb.append("group by room) pop ");
 			sb.append("inner join ");
-			sb.append("(select room, min(checkout) as NextAvailableDate ");
+			sb.append("(select r.*, min(checkout) as NextAvailableDate ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where checkout >= curdate() ");
 			sb.append("group by room) ava ");
-			sb.append("on pop.room = ava.room;");
-
+			sb.append("on pop.room = ava.room ");
+         sb.append("inner join ");
+         sb.append("(select * from lab7_rooms) full ");
+         sb.append("on full.RoomCode = ava.room; ");
 		    // Step 3: (omitted in this example) Start transaction
 
 		    // Step 4: Send SQL statement to DBMS
-		    try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
-		    	try(ResultSet rs = pstmt.executeQuery()) {
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+            try(ResultSet rs = pstmt.executeQuery()) {
 
-				// Step 5: Receive results
-				while (rs.next()) {
-					String RoomCode = rs.getString("RoomCode");
-					String RoomName = rs.getString("RoomName");
-					int Beds = rs.getInt("Beds");
-					String bedType = rs.getString("bedType");
-					int maxOcc = rs.getInt("maxOcc");
-					float basePrice = rs.getFloat("basePrice");
-					String decor = rs.getString("decor");
-					int Popularity = rs.getInt("Popularity");
-					String NextDateAvailable = rs.getString("NextDateAvailable");
-					System.out.format("%s %s %d %s %d %f %s %d %s", RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
-				}
-		    }
-
-		}
-		}
-	}
+				   // Step 5: Receive results
+               System.out.format("%5s |%30s |%4s |%8s |%3s |%10s |%20s |%3s  |%15s%n",
+                                 "room", "room name", "beds", "bed type", "occ",
+                                 "base price", "decor", "pop", "next avail date");
+               System.out.println("-------" + "---------------------------------" + "------" +
+                  "----------" + "-----" + "------------" + "----------------------" + "------" +
+                  "---------------");
+               while (rs.next()) {
+					   String RoomCode = rs.getString("roomcode");
+					   String RoomName = rs.getString("roomname");
+					   int Beds = rs.getInt("beds");
+					   String bedType = rs.getString("bedType");
+					   int maxOcc = rs.getInt("maxOcc");
+					   float basePrice = rs.getFloat("basePrice");
+					   String decor = rs.getString("decor");
+					   double Popularity = rs.getDouble("Popularity");
+					   String NextDateAvailable = rs.getString("NextAvailableDate");
+                  System.out.format("%5s |%30s |%4d |%8s |%3d |%10.2f |%20s |%4.2f |%15s%n",
+                     RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
+                  
+                  System.out.println("-------" + "---------------------------------" + "------" +
+                     "----------" + "-----" + "------------" + "----------------------" + "------" +
+                     "---------------");
+               }
+            }
+         }
+      }
+   }
    
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 2
+   *
+   ---------------------------------------------------------------------------*/
+
    public void requirement2() throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                         System.getenv("HP_JDBC_USER"),
@@ -81,8 +105,8 @@ public class Requirements {
          R2Query r2 = new R2Query();
          
          List<Object> params = new ArrayList<Object>();
-         params.add(r2.endDate);
-         params.add(r2.startDate);
+         params.add(r2.getEndDate());
+         params.add(r2.getStartDate());
          StringBuilder sb = new StringBuilder(
             "SELECT * FROM lab7_rooms WHERE roomcode NOT IN (SELECT DISTINCT roomcode FROM lab7_rooms" +
             " JOIN lab7_reservations ON roomcode = room WHERE checkin <= ? AND checkout >= ?)"
@@ -279,7 +303,7 @@ public class Requirements {
 
             r = new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
                            rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
-                           rs.getString("decor"), r2.startDate, r2.endDate);
+                           rs.getString("decor"), r2.getStartDate(), r2.getEndDate());
 
             availRooms.add(r);
             System.out.format("%d: %s %n", matchCount + 1, rs.getString("roomcode"));
@@ -300,7 +324,7 @@ public class Requirements {
          else {
             Room r = new Room(rs.getString("roomcode"), rs.getString("roomname"), rs.getInt("beds"),
                               rs.getString("bedtype"), rs.getInt("maxocc"), rs.getDouble("basePrice"),
-                              rs.getString("decor"), r2.startDate, r2.endDate);
+                              rs.getString("decor"), r2.getStartDate(), r2.getEndDate());
 
             if (rs.getString(SEARCH_METHOD).equals(ADD_ONE_STR)) {
                r.increaseResStartDay(7);
@@ -400,8 +424,8 @@ public class Requirements {
          " WHERE roomcode NOT IN (" +
          "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
          " WHERE checkin <= DATE_ADD(?, INTERVAL 7 DAY) AND checkout >= DATE_ADD(?, INTERVAL 7 DAY))";
-      params.add(r2.endDate);
-      params.add(r2.startDate);
+      params.add(r2.getEndDate());
+      params.add(r2.getStartDate());
       
       sb.append(searchAddOneWeek);
       sb.append(" UNION ");
@@ -411,8 +435,8 @@ public class Requirements {
       " WHERE roomcode NOT IN (" +
          "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
          " WHERE checkin <= DATE_ADD(?, INTERVAL 14 DAY) AND checkout >= DATE_ADD(?, INTERVAL 14 DAY))";
-      params.add(r2.endDate);
-      params.add(r2.startDate);
+      params.add(r2.getEndDate());
+      params.add(r2.getStartDate());
          
       sb.append(searchAddTwoWeek);
       
@@ -423,8 +447,8 @@ public class Requirements {
             " WHERE roomcode NOT IN (" +
             "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
             " WHERE checkin <= ? AND checkout >= ?)";
-         params.add(r2.endDate);
-         params.add(r2.startDate);
+         params.add(r2.getEndDate());
+         params.add(r2.getStartDate());
 
          sb.append(" UNION ");
          sb.append(searchMatchSame);
@@ -435,8 +459,8 @@ public class Requirements {
             " WHERE roomcode NOT IN (" +
             "SELECT roomcode FROM lab7_rooms JOIN lab7_reservations ON roomcode = room" +
             " WHERE checkin <= ? AND checkout >= ?) AND bedtype = ?";
-         params.add(r2.endDate);
-         params.add(r2.startDate);
+         params.add(r2.getEndDate());
+         params.add(r2.getStartDate());
          params.add(r2.bedType);
 
          sb.append(" UNION ");
@@ -445,84 +469,172 @@ public class Requirements {
       
       return sb.toString();
    }
+   
 
-   private static class R2Query {
-      String firstName;
-      String lastName;
-      String roomCode;
-      String bedType;
-      String startDate;
-      String endDate;
-      int numChildren;
-      int numAdults;
-      int occupancy;
-      
-      R2Query() {
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 6
+   *
+   ---------------------------------------------------------------------------*/
+
+   public void requirement3() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                        System.getenv("HP_JDBC_USER"),
+                                                        System.getenv("HP_JDBC_PW"))) {
          Scanner sc = new Scanner(System.in);
-         System.out.print("Enter a first name: ");
-         firstName = sc.nextLine();
-         
-         System.out.print("Enter a last name: ");
-         lastName = sc.nextLine();
-         
-         System.out.print("Enter a room code (or 'Any' for no preference): ");
-         roomCode = sc.nextLine();
-         
-         System.out.print("Enter a bed type (or 'Any' for no preference): ");
-         bedType = sc.nextLine();
-        
-         boolean is_valid = false;
-         do {
-            System.out.print("Start date of stay (yyyy-mm-dd): ");
-            startDate = sc.nextLine();
-         
-            System.out.print("End date of stay (yyyy-mm-dd): ");
-            endDate = sc.nextLine();
+         System.out.print("Enter your reservation code: ");
+         String resCode = sc.nextLine();
 
-            is_valid = check_dates(startDate, endDate);
+         System.out.println("Fill in new values for each of the following fields\n(ENTER for no change)\n");
 
-            if (!is_valid)
-               System.out.println("Duration of stay is not valid!\n");
-         } while (!is_valid);
+         System.out.print("First name: ");
+         String firstName = sc.nextLine();
 
-         System.out.print("Number of children during stay: ");
-         numChildren = Integer.valueOf(sc.nextLine());
-         
-         System.out.print("Number of adults during stay: ");
-         numAdults = Integer.valueOf(sc.nextLine());
-         
-         occupancy = numChildren + numAdults;
-      }
-      
-      private static boolean check_dates(String start, String end) {
-         // confirm user input the correct date structure
-         String match = "\\d{4}-\\d{2}-\\d{2}";
-         if (!start.matches(match) || !end.matches(match))
-            return false;
+         System.out.print("Last name: ");
+         String lastName = sc.nextLine();
 
-         String[] start_split = start.split("-");
-         String[] end_split = end.split("-");
+         System.out.print("Begin date (mm-dd-yyyy): ");
+         String startDate = sc.nextLine();
 
-         // check that the start date isn't after the end date
-         int year_diff = Integer.valueOf(end_split[0]) - Integer.valueOf(start_split[0]);
+         System.out.print("End date (mm-dd-yyyy): ");
+         String endDate = sc.nextLine();
 
-         if (year_diff < 0)
-            return false;
-         else if (year_diff == 0) {
-            int month_diff = Integer.valueOf(end_split[1]) - Integer.valueOf(start_split[1]);
-         
-            if (month_diff < 0)
-               return false;
-            else if (month_diff == 0) {
-               int day_diff = Integer.valueOf(end_split[2]) - Integer.valueOf(start_split[2]);
+         System.out.print("Number of children: ");
+         int numChildren = Integer.valueOf(sc.nextLine());
 
-               if (day_diff < 0)
-                  return false;
-            }
+         System.out.print("Number of adults: ");
+         int numAdults = Integer.valueOf(sc.nextLine());
+
+         List<Object> params = new ArrayList<Object>();
+
+         String query = "UPDATE lab7_leservations SET ";
+         StringBuilder sb = new StringBuilder(query);
+
+         if (!"".equalsIgnoreCase(firstName)) {
+            sb.append("FirstName = ?, ");
+            params.add(firstName);
          }
 
-         return true;
+         if (!"".equalsIgnoreCase(lastName)) {
+            sb.append("LastName = ?, ");
+            params.add(lastName);
+         }
+
+         if (!"".equalsIgnoreCase(startDate)) {
+            sb.append("CheckIn = ?, ");
+            params.add(startDate);
+         }
+
+         if (!"".equalsIgnoreCase(endDate)) {
+            sb.append("CheckOut = ?, ");
+            params.add(endDate);
+         }
+         
+         sb.append("WHERE CODE = ?;");
+         params.add(resCode);
+
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+            int i = 1;
+            for (Object p : params) {
+               pstmt.setObject(i++, p);
+            }
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+               
+
+            }
+         }
       }
+   }
+
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 6
+   *
+   ---------------------------------------------------------------------------*/
+   
+   public void requirement6() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                        System.getenv("HP_JDBC_USER"),
+                                                        System.getenv("HP_JDBC_PW"))) {
+         
+         String query =
+            "SELECT COALESCE(roomcode, 'totals') roomcode," +
+            "m1 January,m2 February,m3 March,m4 April,m5 May,m6 June," +
+            "m7 July,m8 August,m9 September,m10 October,m11 November,m12 December," +
+            "m1+m2+m3+m4+m5+m6+m7+m8+m9+m10+m11+m12 AS TotalMonthRevenue " +
+            
+            "FROM (SELECT roomcode," +
+            "sum(m1) m1,sum(m2) m2,sum(m3) m3,sum(m4) m4,sum(m5) m5,sum(m6) m6," +
+            "sum(m7) m7,sum(m8) m8,sum(m9) m9,sum(m10) m10,sum(m11) m11,sum(m12) m12 " +
+            
+            "FROM (SELECT roomcode," + months_to_col() + "FROM lab7_reservations " +
+            "JOIN lab7_rooms ON roomcode = room) month_reservation_cost " +
+            "GROUP BY roomcode WITH ROLLUP) monthly_revenue";
+            
+         try (Statement stmt = conn.createStatement();
+               ResultSet rs = stmt.executeQuery(query)) {
+                  
+                  System.out.format("%9s |%9s |%9s |%9s |%9s |%9s |%9s |" +
+                                    "%9s |%9s |%9s |%9s |%9s |%9s |%15s%n",
+                                    "roomcode", "January", "February", "March", "April", "May",
+                                    "June", "July", "August", "September", "October",
+                                    "November", "December",
+                                    "Monthly Revenue");
+                  
+                  print_row_delim();
+                  
+                  while (rs.next()) {
+                     String roomcode = rs.getString("roomcode");
+                     int jan_rev = rs.getInt("January");
+                     int feb_rev = rs.getInt("February");
+                     int mar_rev = rs.getInt("March");
+                     int apr_rev = rs.getInt("April");
+                     int may_rev = rs.getInt("May");
+                     int jun_rev = rs.getInt("June");
+                     int jul_rev = rs.getInt("July");
+                     int aug_rev = rs.getInt("August");
+                     int sep_rev = rs.getInt("September");
+                     int oct_rev = rs.getInt("October");
+                     int nov_rev = rs.getInt("November");
+                     int dec_rev = rs.getInt("December");
+                     int total = rs.getInt("TotalMonthRevenue");
+                     
+                     System.out.format("%9s |%9d |%9d |%9d |%9d |%9d |%9d |" +
+                                       "%9d |%9d |%9d |%9d |%9d |%9d |%15d%n",
+                                       roomcode,
+                                       jan_rev, feb_rev, mar_rev, apr_rev, may_rev,
+                                       jun_rev, jul_rev, aug_rev, sep_rev, oct_rev,
+                                       nov_rev, dec_rev, total);
+                     print_row_delim();
+                  }
+               }
+      }
+   }
+   
+   private void print_row_delim() {
+      String roomcode_str = "-----------";
+      String month_str = "-----------";
+      String total_str = "----------------";
+      System.out.print(roomcode_str);
+      for (int i = 0; i < 12; i++)
+         System.out.print(month_str);
+      System.out.println(total_str);
+   }
+   
+   private String months_to_col() {
+      String res = "";
+      for (int i = 1; i <= 12; i++) {
+         res += "CASE MONTH(checkout) WHEN " + i +
+                " THEN ROUND(rate * DATEDIFF(checkout, checkin), 0) END AS m" + i;
+
+         if (i < 12)
+            res += ",";
+         else
+            res += " ";
+      }
+      
+      return res;
    }
 }
 
