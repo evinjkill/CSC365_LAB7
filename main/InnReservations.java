@@ -32,6 +32,14 @@ public class InnReservations {
                req.requirement2();
             }
 
+            else if (option.equalsIgnoreCase("C") || option.equalsIgnoreCase("Change")) {
+               req.requirement3();
+            }
+
+            else if (option.equalsIgnoreCase("Ca") || option.equalsIgnoreCase("Cancle")) {
+               req.requirement4();
+            }
+
             else if (option.equalsIgnoreCase("Rev") || option.equalsIgnoreCase("Revenue")) {
                req.requirement6();
             }

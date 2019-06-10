@@ -199,7 +199,7 @@ public class Requirements {
 
          List<Object> params = new ArrayList<Object>();
 
-         String query = "UPDATE lab7_leservations SET ";
+         StringBuilder sb = new StringBuilder("UPDATE lab7_reservations SET ");
 
          if (!"".equalsIgnoreCase(firstName)) {
             sb.append("FirstName = ?, ");
@@ -241,15 +241,57 @@ public class Requirements {
                pstmt.setObject(i++, p);
             }
             
-            try (ResultSet rs = pstmt.executeUpdate()) {
-               System.out.println("UPDATE PROBS WENT THROUGH");
+            int res = pstmt.executeUpdate();
+            System.out.format("UPDATE PROBS WENT THROUGH, %d\n", res);
 
-            }
+            
          }
-
+      }
 
    }
    
+   public void requirement4() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                        System.getenv("HP_JDBC_USER"),
+                                                        System.getenv("HP_JDBC_PW"))) {
+         Scanner sc = new Scanner(System.in);
+         System.out.print("Enter your reservation code: ");
+         String resCode = sc.nextLine();
+
+         System.out.print("BRUH ARE YOU SURE YOU WANT TO DELETE YOUR RESERVATION?! [Y/n]: ");
+         String response = sc.nextLine();
+         if(!"Y".equalsIgnoreCase(response)) {
+            System.out.println("You won't regret this!");
+            return;
+         }
+         
+         System.out.print("Bruuuuuuuuuh. You really want to do this... [Y/n]: ");
+         response = sc.nextLine();
+         if(!"Y".equalsIgnoreCase(response)) {
+            System.out.println("I knew you'd change your mind!");
+            return;
+         }
+
+         System.out.println("Fuck it, we didn't want you there anyways");
+         
+         List<Object> params = new ArrayList<Object>();
+
+         StringBuilder sb = new StringBuilder("DELETE FROM lab7_reservations WHERE CODE = ?;");
+         params.add(resCode);
+
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+            int i = 1;
+            for (Object p : params) {
+               pstmt.setObject(i++, p);
+            }
+            
+            boolean res = pstmt.execute();
+            
+         }
+      }
+   }
+
+
    // returns true if any rooms were found
    private List<Room> execute_query(Connection conn, R2Query r2, String query, List<Object> params) throws SQLException {
       ArrayList<Room> availRooms = new ArrayList<>();
@@ -470,83 +512,6 @@ public class Requirements {
       return sb.toString();
    }
    
-
-   /*---------------------------------------------------------------------------
-   *
-   * Requirement 6
-   *
-   ---------------------------------------------------------------------------*/
-
-   public void requirement3() throws SQLException {
-      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
-                                                        System.getenv("HP_JDBC_USER"),
-                                                        System.getenv("HP_JDBC_PW"))) {
-         Scanner sc = new Scanner(System.in);
-         System.out.print("Enter your reservation code: ");
-         String resCode = sc.nextLine();
-
-         System.out.println("Fill in new values for each of the following fields\n(ENTER for no change)\n");
-
-         System.out.print("First name: ");
-         String firstName = sc.nextLine();
-
-         System.out.print("Last name: ");
-         String lastName = sc.nextLine();
-
-         System.out.print("Begin date (mm-dd-yyyy): ");
-         String startDate = sc.nextLine();
-
-         System.out.print("End date (mm-dd-yyyy): ");
-         String endDate = sc.nextLine();
-
-         System.out.print("Number of children: ");
-         int numChildren = Integer.valueOf(sc.nextLine());
-
-         System.out.print("Number of adults: ");
-         int numAdults = Integer.valueOf(sc.nextLine());
-
-         List<Object> params = new ArrayList<Object>();
-
-         String query = "UPDATE lab7_leservations SET ";
-         StringBuilder sb = new StringBuilder(query);
-
-         if (!"".equalsIgnoreCase(firstName)) {
-            sb.append("FirstName = ?, ");
-            params.add(firstName);
-         }
-
-         if (!"".equalsIgnoreCase(lastName)) {
-            sb.append("LastName = ?, ");
-            params.add(lastName);
-         }
-
-         if (!"".equalsIgnoreCase(startDate)) {
-            sb.append("CheckIn = ?, ");
-            params.add(startDate);
-         }
-
-         if (!"".equalsIgnoreCase(endDate)) {
-            sb.append("CheckOut = ?, ");
-            params.add(endDate);
-         }
-         
-         sb.append("WHERE CODE = ?;");
-         params.add(resCode);
-
-         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
-            int i = 1;
-            for (Object p : params) {
-               pstmt.setObject(i++, p);
-            }
-            
-            try (ResultSet rs = pstmt.executeQuery()) {
-               
-
-            }
-         }
-      }
-   }
-
    /*---------------------------------------------------------------------------
    *
    * Requirement 6
