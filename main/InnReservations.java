@@ -28,7 +28,7 @@ public class InnReservations {
                req.requirement1();
             }
 
-            else if (option.equalsIgnoreCase("Re") || option.equalsIgnoreCase("Reservation")) {
+            else if (option.equalsIgnoreCase("Re") || option.equalsIgnoreCase("Reserve")) {
                req.requirement2();
             }
 
@@ -36,7 +36,7 @@ public class InnReservations {
                req.requirement3();
             }
 
-            else if (option.equalsIgnoreCase("Ca") || option.equalsIgnoreCase("Cancle")) {
+            else if (option.equalsIgnoreCase("Ca") || option.equalsIgnoreCase("Cancel")) {
                req.requirement4();
             }
 
@@ -62,7 +62,7 @@ public class InnReservations {
    private static void print_options() {
       System.out.println("Select an option:");
       System.out.println("\tR[oom]: Display rooms ordered by popularity.");
-      System.out.println("\tRe[servation]: Reserve a room.");
+      System.out.println("\tRe[serve]: Reserve a room.");
       System.out.println("\tC[hange] reservation: Make changes to a reservation.");
       System.out.println("\tCa[ncel] reservation: Cancel your reservation.");
       System.out.println("\tF[ind] Reservations: Find reservations that match a query.");
