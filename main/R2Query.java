@@ -1,4 +1,4 @@
-package main
+package main;
 
 import java.util.Scanner;
 
@@ -7,8 +7,8 @@ public final class R2Query {
    final String lastName;
    final String roomCode;
    final String bedType;
-   final String startDate;
-   final String endDate;
+   private String startDate;
+   private String endDate;
    final int numChildren;
    final int numAdults;
    final int occupancy;
@@ -27,7 +27,20 @@ public final class R2Query {
       System.out.print("Enter a bed type (or 'Any' for no preference): ");
       bedType = sc.nextLine();
      
+      assign_dates(sc);
+
+      System.out.print("Number of children during stay: ");
+      numChildren = Integer.valueOf(sc.nextLine());
+      
+      System.out.print("Number of adults during stay: ");
+      numAdults = Integer.valueOf(sc.nextLine());
+      
+      occupancy = numChildren + numAdults;
+   }
+
+   private void assign_dates(Scanner sc) {
       boolean is_valid = false;
+
       do {
          System.out.print("Start date of stay (yyyy-mm-dd): ");
          startDate = sc.nextLine();
@@ -40,14 +53,6 @@ public final class R2Query {
          if (!is_valid)
             System.out.println("Duration of stay is not valid!\n");
       } while (!is_valid);
-
-      System.out.print("Number of children during stay: ");
-      numChildren = Integer.valueOf(sc.nextLine());
-      
-      System.out.print("Number of adults during stay: ");
-      numAdults = Integer.valueOf(sc.nextLine());
-      
-      occupancy = numChildren + numAdults;
    }
    
    private static boolean check_dates(String start, String end) {
@@ -78,5 +83,13 @@ public final class R2Query {
       }
 
       return true;
+   }
+
+   public String getStartDate() {
+      return startDate;
+   }
+
+   public String getEndDate() {
+      return endDate;
    }
 }
