@@ -73,6 +73,11 @@ public class Requirements {
 		}
 	}
    
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 2
+   *
+   ---------------------------------------------------------------------------*/
    public void requirement2() throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                         System.getenv("HP_JDBC_USER"),
@@ -364,84 +369,93 @@ public class Requirements {
       
       return sb.toString();
    }
+   
+   /*---------------------------------------------------------------------------
+   *
+   * Requirement 6
+   *
+   ---------------------------------------------------------------------------*/
+   
+   public void requirement6() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                        System.getenv("HP_JDBC_USER"),
+                                                        System.getenv("HP_JDBC_PW"))) {
+         
+         String query =
+            "SELECT COALESCE(roomcode, 'totals') roomcode," +
+            "m1 January,m2 February,m3 March,m4 April,m5 May,m6 June," +
+            "m7 July,m8 August,m9 September,m10 October,m11 November,m12 December," +
+            "m1+m2+m3+m4+m5+m6+m7+m8+m9+m10+m11+m12 AS TotalMonthRevenue " +
+            
+            "FROM (SELECT roomcode," +
+            "sum(m1) m1,sum(m2) m2,sum(m3) m3,sum(m4) m4,sum(m5) m5,sum(m6) m6," +
+            "sum(m7) m7,sum(m8) m8,sum(m9) m9,sum(m10) m10,sum(m11) m11,sum(m12) m12 " +
+            
+            "FROM (SELECT roomcode," + months_to_col() + "FROM lab7_reservations" +
+            "JOIN lab7_rooms ON roomcode = room) month_reservation_cost "; +
+            "GROUP BY roomcode WITH ROLLUP) monthly_revenue";
+            
+         try (Statement stmt = conn.createStatement();
+               ResultSet rs = stmt.executeQuery(query)) {
+                  
+                  System.out.format("%10s | %10s | %10s | %10s | %10s | %10s | 10%s | " +
+                                    "%10s | %10s | %10s | %10s | %10s | %10s | %21s%n",
+                                    "roomcode", "January", "February", "March", "April", "May",
+                                    "June", "July", "August", "September", "October",
+                                    "November", "December",
+                                    "Total Month Revenue");
+                  
+                  print_row_delim();
+                  
+                  while (rs.next()) {
+                     String roomcode = rs.getString("roomcode");
+                     int jan_rev = rs.getInt("January");
+                     int feb_rev = rs.getInt("February");
+                     int mar_rev = rs.getInt("March");
+                     int apr_rev = rs.getInt("April");
+                     int may_rev = rs.getInt("May");
+                     int jun_rev = rs.getInt("June");
+                     int jul_rev = rs.getInt("July");
+                     int aug_rev = rs.getInt("August");
+                     int sep_rev = rs.getInt("September");
+                     int oct_rev = rs.getInt("October");
+                     int nov_rev = rs.getInt("November");
+                     int dec_rev = rs.getInt("December");
+                     int total = rs.getInt("TotalMonthRevenue");
+                     
+                     System.out.format("10%s | %10d | %10d | %10d | %10d | %10d | %10d | " +
+                                       "%10d | %10d | %10d | %10d | %10d | %10d | %21d%n",
+                                       roomcode
+                                       jan_rev, feb_rev, mar_rev, apr_rev, may_rev,
+                                       jun_rev, jul_rev, aug_rev, sep_rev, oct_rev,
+                                       nov_rev, dec_rev, total)
+                     print_row_delim();
+                  }
+               }
+      }
+   }
+   
+   private void print_row_delim() {
+      String roomcode_str = "------------";
+      String month_str = "-------------";
+      String total_str = "----------------------"
+      System.out.print(roomcode_str);
+      for (i = 0; i < 12; i++)
+         System.out.print(month_str);
+      System.out.println(total_str);
+   }
+   
+   private String months_to_col() {
+      String res = "";
+      for (i = 1; i <= 12; i++) {
+         res += "CASE month(checkout) WHEN " + i +
+               "THEN round(rate * DATEDIFF(checkout, checkin), 0) END AS m" + i;
 
-   private static class R2Query {
-      String firstName;
-      String lastName;
-      String roomCode;
-      String bedType;
-      String startDate;
-      String endDate;
-      int numChildren;
-      int numAdults;
-      int occupancy;
-      
-      R2Query() {
-         Scanner sc = new Scanner(System.in);
-         System.out.print("Enter a first name: ");
-         firstName = sc.nextLine();
-         
-         System.out.print("Enter a last name: ");
-         lastName = sc.nextLine();
-         
-         System.out.print("Enter a room code (or 'Any' for no preference): ");
-         roomCode = sc.nextLine();
-         
-         System.out.print("Enter a bed type (or 'Any' for no preference): ");
-         bedType = sc.nextLine();
-        
-         boolean is_valid = false;
-         do {
-            System.out.print("Start date of stay (yyyy-mm-dd): ");
-            startDate = sc.nextLine();
-         
-            System.out.print("End date of stay (yyyy-mm-dd): ");
-            endDate = sc.nextLine();
-
-            is_valid = check_dates(startDate, endDate);
-
-            if (!is_valid)
-               System.out.println("Duration of stay is not valid!\n");
-         } while (!is_valid);
-
-         System.out.print("Number of children during stay: ");
-         numChildren = Integer.valueOf(sc.nextLine());
-         
-         System.out.print("Number of adults during stay: ");
-         numAdults = Integer.valueOf(sc.nextLine());
-         
-         occupancy = numChildren + numAdults;
+         if (i < 12)
+            res += ",";
       }
       
-      private static boolean check_dates(String start, String end) {
-         // confirm user input the correct date structure
-         String match = "\\d{4}-\\d{2}-\\d{2}";
-         if (!start.matches(match) || !end.matches(match))
-            return false;
-
-         String[] start_split = start.split("-");
-         String[] end_split = end.split("-");
-
-         // check that the start date isn't after the end date
-         int year_diff = Integer.valueOf(end_split[0]) - Integer.valueOf(start_split[0]);
-
-         if (year_diff < 0)
-            return false;
-         else if (year_diff == 0) {
-            int month_diff = Integer.valueOf(end_split[1]) - Integer.valueOf(start_split[1]);
-         
-            if (month_diff < 0)
-               return false;
-            else if (month_diff == 0) {
-               int day_diff = Integer.valueOf(end_split[2]) - Integer.valueOf(start_split[2]);
-
-               if (day_diff < 0)
-                  return false;
-            }
-         }
-
-         return true;
-      }
+      return res;
    }
 }
 
