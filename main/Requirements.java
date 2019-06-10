@@ -24,20 +24,22 @@ public class Requirements {
 								   System.getenv("HP_JDBC_USER"),
 								   System.getenv("HP_JDBC_PW"))) {
 		    // Step 2: Construct SQL statement
-			StringBuilder sb = new StringBuilder("select pop.room, Popularity, NextAvailableDate from ");
+			StringBuilder sb = new StringBuilder("select RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable from");
 			sb.append("(select room, round (sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where DATEDIFF(CURDATE(), checkin) < 180 and DATEDIFF(CURDATE(), checkin) > 0 ");
 			sb.append("group by room) pop ");
 			sb.append("inner join ");
-			sb.append("(select room, min(checkout) as NextAvailableDate ");
+			sb.append("(select room, min(checkout) as NextDateAvailable ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where checkout >= curdate() ");
 			sb.append("group by room) ava ");
-			sb.append("on pop.room = ava.room;");
-
+			sb.append("on pop.room = ava.room ");
+         sb.append("inner join ");
+         sb.append("(select * from lab7_rooms) full ");
+         sb.append("on full.RoomCode = ava.room; ");
 		    // Step 3: (omitted in this example) Start transaction
 
 		    // Step 4: Send SQL statement to DBMS
