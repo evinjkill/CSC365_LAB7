@@ -36,48 +36,56 @@ public class Requirements {
 	public void requirement1() throws SQLException {
 
 		// Step 1: Establish connection to RDBMS
-		try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
 								   System.getenv("HP_JDBC_USER"),
 								   System.getenv("HP_JDBC_PW"))) {
-		    // Step 2: Construct SQL statement
-			StringBuilder sb = new StringBuilder("select pop.room, Popularity, NextAvailableDate from ");
-			sb.append("(select room, round (sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
+         // Step 2: Construct SQL statement
+			StringBuilder sb = new StringBuilder("select pop.*, NextAvailableDate from ");
+			sb.append("(select r.*, round(sum(DATEDIFF(checkout, checkin)) / 180, 2) as Popularity ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where DATEDIFF(CURDATE(), checkin) < 180 and DATEDIFF(CURDATE(), checkin) > 0 ");
 			sb.append("group by room) pop ");
 			sb.append("inner join ");
-			sb.append("(select room, min(checkout) as NextAvailableDate ");
+			sb.append("(select r.*, min(checkout) as NextAvailableDate ");
 			sb.append("from lab7_rooms as r ");
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where checkout >= curdate() ");
 			sb.append("group by room) ava ");
-			sb.append("on pop.room = ava.room;");
-
-		    // Step 3: (omitted in this example) Start transaction
+			sb.append("on pop.roomcode = ava.roomcode order by popularity desc");
 
 		    // Step 4: Send SQL statement to DBMS
-		    try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
-		    	try(ResultSet rs = pstmt.executeQuery()) {
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+            try(ResultSet rs = pstmt.executeQuery()) {
 
-				// Step 5: Receive results
-				while (rs.next()) {
-					String RoomCode = rs.getString("RoomCode");
-					String RoomName = rs.getString("RoomName");
-					int Beds = rs.getInt("Beds");
-					String bedType = rs.getString("bedType");
-					int maxOcc = rs.getInt("maxOcc");
-					float basePrice = rs.getFloat("basePrice");
-					String decor = rs.getString("decor");
-					int Popularity = rs.getInt("Popularity");
-					String NextDateAvailable = rs.getString("NextDateAvailable");
-					System.out.format("%s %s %d %s %d %f %s %d %s", RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
-				}
-		    }
-
-		}
-		}
-	}
+				   // Step 5: Receive results
+               System.out.format("%5s |%30s |%4s |%8s |%3s |%10s |%20s |%3s  |%15s%n",
+                                 "room", "room name", "beds", "bed type", "occ",
+                                 "base price", "decor", "pop", "next avail date");
+               System.out.println("-------" + "---------------------------------" + "------" +
+                  "----------" + "-----" + "------------" + "----------------------" + "------" +
+                  "---------------");
+               while (rs.next()) {
+					   String RoomCode = rs.getString("roomcode");
+					   String RoomName = rs.getString("roomname");
+					   int Beds = rs.getInt("beds");
+					   String bedType = rs.getString("bedType");
+					   int maxOcc = rs.getInt("maxOcc");
+					   float basePrice = rs.getFloat("basePrice");
+					   String decor = rs.getString("decor");
+					   double Popularity = rs.getDouble("Popularity");
+					   String NextDateAvailable = rs.getString("NextAvailableDate");
+                  System.out.format("%5s |%30s |%4d |%8s |%3d |%10.2f |%20s |%4.2f |%15s%n",
+                     RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
+                  
+                  System.out.println("-------" + "---------------------------------" + "------" +
+                     "----------" + "-----" + "------------" + "----------------------" + "------" +
+                     "---------------");
+               }
+            }
+         }
+      }
+   }
    
    /*---------------------------------------------------------------------------
    *
