@@ -167,10 +167,10 @@ public class Requirements {
          System.out.print("End date (mm-dd-yyyy): ");
          String endDate = sc.nextLine();
 
-         System.out.print("Number of children: ");
+         System.out.print("Number of children (-1 for no change): ");
          int numChildren = Integer.valueOf(sc.nextLine());
 
-         System.out.print("Number of adults: ");
+         System.out.print("Number of adults (-1 for no change): ");
          int numAdults = Integer.valueOf(sc.nextLine());
 
          List<Object> params = new ArrayList<Object>();
@@ -196,6 +196,17 @@ public class Requirements {
             sb.append("CheckOut = ?, ");
             params.add(endDate);
          }
+
+         if(numChildren >= 0) {
+            sb.append("Kids = ?, ");
+            params.add(numChildren);
+         }
+
+         if(numAdults >= 0) {
+            sb.append("Adults = ? ");
+            params.add(numAdults);
+         }
+
          
          sb.append("WHERE CODE = ?;");
          params.add(resCode);
@@ -206,8 +217,8 @@ public class Requirements {
                pstmt.setObject(i++, p);
             }
             
-            try (ResultSet rs = pstmt.executeQuery()) {
-               
+            try (ResultSet rs = pstmt.executeUpdate()) {
+               System.out.println("UPDATE PROBS WENT THROUGH");
 
             }
          }
