@@ -581,8 +581,6 @@ public class Requirements {
             sb.append((first_filter ? "AND " : "") + "CODE LIKE ?");
          }
 
-         conn.setAutoCommit(false);
-
          try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
             int i = 1;
             for (Object o : params) {
