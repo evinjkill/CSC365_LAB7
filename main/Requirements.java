@@ -52,10 +52,10 @@ public class Requirements {
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where checkout >= curdate() ");
 			sb.append("group by room) ava ");
-			sb.append("on pop.room = ava.room ");
+			sb.append("on pop.roomcode = ava.roomcode ");
          sb.append("inner join ");
          sb.append("(select * from lab7_rooms) full ");
-         sb.append("on full.RoomCode = ava.room; ");
+         sb.append("on full.RoomCode = ava.roomcode order by Popularity desc; ");
 		    // Step 3: (omitted in this example) Start transaction
 
 		    // Step 4: Send SQL statement to DBMS
@@ -81,10 +81,6 @@ public class Requirements {
 					   String NextDateAvailable = rs.getString("NextAvailableDate");
                   System.out.format("%5s |%30s |%4d |%8s |%3d |%10.2f |%20s |%4.2f |%15s%n",
                      RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor, Popularity, NextDateAvailable);
-                  
-                  System.out.println("-------" + "---------------------------------" + "------" +
-                     "----------" + "-----" + "------------" + "----------------------" + "------" +
-                     "---------------");
                }
             }
          }
@@ -386,7 +382,8 @@ public class Requirements {
                      " FirstName, Adults, Kids) VALUES (?, ?, DATE(?), DATE(?), ?, ?, ?, ?, ?)";
                   
       List<Object> params = new ArrayList<Object>();
-      params.add(get_max_code(conn) + 1);
+      int code = get_max_code(conn) + 1;
+      params.add(code);
       params.add(room.getRoomCode());
       params.add(room.getStart());
       params.add(room.getEnd());
@@ -403,7 +400,8 @@ public class Requirements {
          }
 
          int rows = pstmt.executeUpdate();
-         System.out.printf("Reservation %s!\n", rows > 0 ? "successful" : "failed");
+         System.out.printf("Reservation %s!", rows > 0 ? "successful" : "failed");
+         System.out.printf(" %s\n", rows > 0 ? "(code: " + code + ")" : "");
       }
       catch (SQLException e) {
          System.err.println("SQLException: " + e.getMessage());
@@ -511,6 +509,110 @@ public class Requirements {
       
       return sb.toString();
    }
+
+   public void requirement5() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                         System.getenv("HP_JDBC_USER"),
+                                                         System.getenv("HP_JDBC_PW"))) {
+
+         List<Object> params = new ArrayList<Object>();
+         StringBuilder sb = new StringBuilder("SELECT lab7_reservations.*, roomname FROM lab7_reservations" +
+         " JOIN lab7_rooms ON roomcode = room WHERE ");
+         Scanner sc = new Scanner(System.in);
+         boolean first_filter = false;
+
+         System.out.println("For any option, press ENTER to skip");
+         System.out.print("Enter a first name: ");
+         String fname = sc.nextLine();
+
+         if (fname.length() > 0) {
+            params.add(fname);
+            sb.append("firstname LIKE ? ");
+            first_filter = true;
+         }
+
+         System.out.print("Enter a last name: ");
+         String lname = sc.nextLine();
+
+         if (lname.length() > 0) {
+            params.add(lname);
+            sb.append((first_filter ? "AND " : "") + "lastname LIKE ? ");
+            first_filter = true;
+         }
+
+         String start = "", end = "";
+         do {
+            System.out.print("Enter a start for a date range (yyyy-mm-dd): ");
+            start = sc.nextLine();
+            if (start.length() == 0)
+               break;
+
+            System.out.print("Enter an end for a date range (yyyy-mm-dd):  ");
+            end = sc.nextLine();
+            if (end.length() == 0)
+               break;
+         }
+         while(!R2Query.check_dates(start, end));
+
+         if (start.length() > 0 && end.length() > 0) {
+            params.add(start);
+            sb.append((first_filter ? "AND " : "") + "checkin >= ? ");
+            params.add(end);
+            sb.append("AND checkout <= ? ");
+            first_filter = true;
+         }
+
+         System.out.print("Enter a room code: ");
+         String roomcode = sc.nextLine();
+
+         if (roomcode.length() > 0) {
+            params.add(roomcode);
+            sb.append((first_filter ? "AND " : "") + "roomcode LIKE ? ");
+            first_filter = true;
+         }
+
+         System.out.print("Enter a reservation code: ");
+         String rescode = sc.nextLine();
+
+         if (rescode.length() > 0) {
+            params.add(rescode);
+            sb.append((first_filter ? "AND " : "") + "CODE LIKE ?");
+         }
+
+         conn.setAutoCommit(false);
+
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+            int i = 1;
+            for (Object o : params) {
+               pstmt.setObject(i++, o);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+               System.out.println("Matching reservations:\n");
+               System.out.format("%6s |%4s |%10s |%10s |%6s |%20s |%20s |%6s |%4s |%30s\n",
+                  "CODE", "room", "checkin", "checkout", "rate", "last name", "first name",
+                  "adults", "kids", "room name");
+               System.out.println("--------" + "------" + "------------" + "------------" +
+                  "--------" + "----------------------" + "----------------------" + "--------" +
+                  "------" + "------------------------------");
+
+               int count = 0;
+               while (rs.next()) {
+                  System.out.format("%6s |%4s |%10s |%10s |%6.2f |%20s |%20s |%6d |%4d |%30s\n",
+                     rs.getString("CODE"), rs.getString("room"), rs.getDate("checkin").toString(),
+                     rs.getDate("checkout").toString(), rs.getDouble("rate"), rs.getString("lastname"),
+                     rs.getString("firstname"), rs.getInt("adults"), rs.getInt("kids"), rs.getString("roomname"));
+                  count++;
+               }
+
+               System.out.println();
+               if (count == 0)
+                  System.out.println("No matches found!");
+            }
+         }
+      }
+
+   }
    
    /*---------------------------------------------------------------------------
    *
@@ -571,7 +673,6 @@ public class Requirements {
                                        jan_rev, feb_rev, mar_rev, apr_rev, may_rev,
                                        jun_rev, jul_rev, aug_rev, sep_rev, oct_rev,
                                        nov_rev, dec_rev, total);
-                     print_row_delim();
                   }
                }
       }

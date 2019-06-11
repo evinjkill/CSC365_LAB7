@@ -55,7 +55,10 @@ public final class R2Query {
       } while (!is_valid);
    }
    
-   private static boolean check_dates(String start, String end) {
+   public static boolean check_dates(String start, String end) {
+      if (start == null || end == null)
+         return false;
+
       // confirm user input the correct date structure
       String match = "\\d{4}-\\d{2}-\\d{2}";
       if (!start.matches(match) || !end.matches(match))

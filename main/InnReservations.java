@@ -40,6 +40,10 @@ public class InnReservations {
                req.requirement4();
             }
 
+            else if (option.equalsIgnoreCase("F") || option.equalsIgnoreCase("Find")) {
+               req.requirement5();
+            }
+
             else if (option.equalsIgnoreCase("Rev") || option.equalsIgnoreCase("Revenue")) {
                req.requirement6();
             }
