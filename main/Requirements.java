@@ -52,10 +52,12 @@ public class Requirements {
 			sb.append("inner join lab7_reservations as res on r.roomcode = res.room ");
 			sb.append("where checkout >= curdate() ");
 			sb.append("group by room) ava ");
-			sb.append("on pop.roomcode = ava.roomcode ");
+			sb.append("on pop.RoomCode = ava.RoomCode ");
          sb.append("inner join ");
          sb.append("(select * from lab7_rooms) full ");
-         sb.append("on full.RoomCode = ava.roomcode order by Popularity desc; ");
+         sb.append("on full.RoomCode = ava.RoomCode ");
+         sb.append("order by popularity desc; ");
+
 		    // Step 3: (omitted in this example) Start transaction
 
 		    // Step 4: Send SQL statement to DBMS
