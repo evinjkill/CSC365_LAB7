@@ -177,6 +177,7 @@ public class Requirements {
 
          if (resCode == null || resCode.length() == 0) {
             System.out.println("A reservation code is required!");
+            return;
          }
 
          System.out.println("Fill in new values for each of the following fields\n(ENTER for no change)\n");
