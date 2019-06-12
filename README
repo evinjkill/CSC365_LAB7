@@ -1,0 +1,13 @@
+Tyler Campanile, Evin Killian (tcampani, ekillian)
+
+How to run:
+export the following:
+CLASSPATH=$CLASSPATH:mysql-connector-java-8.0.16:wq-bin.jar:.
+HP_JDBC_URL: use jdbc:mysql://db.labthreesixfive.com/ekillian?autoReconnect=true\&useSSL=false
+HP_JDBC_USER: use ekillian or tcampani
+HP_JDBC_PW: use S19_CSC-365-011798367 (ekillian) or S19_CSC-365-012989700 (tcampani)
+
+Then just compile (javac *.java)
+and run the code (java InnReservations)
+
+
