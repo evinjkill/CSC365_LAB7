@@ -198,33 +198,46 @@ public class Requirements {
          List<Object> params = new ArrayList<Object>();
 
          StringBuilder sb = new StringBuilder("UPDATE lab7_reservations SET ");
+         int param_count = 0;
 
          if (!"".equalsIgnoreCase(firstName)) {
-            sb.append("FirstName = ?, ");
+            sb.append("FirstName = ? ");
+            param_count++;
             params.add(firstName);
          }
 
          if (!"".equalsIgnoreCase(lastName)) {
-            sb.append("LastName = ?, ");
+            if(param_count > 0) sb.append("AND ");
+            param_count++;
+            sb.append("LastName = ? ");
             params.add(lastName);
          }
 
          if (!"".equalsIgnoreCase(startDate)) {
-            sb.append("CheckIn = ?, ");
+            if(param_count > 0) sb.append("AND ");
+            param_count++;
+            sb.append("CheckIn = ? ");
             params.add(startDate);
          }
 
          if (!"".equalsIgnoreCase(endDate)) {
-            sb.append("CheckOut = ?, ");
+            if(param_count > 0) sb.append("AND ");
+            param_count++;
+            sb.append("CheckOut = ? ");
             params.add(endDate);
          }
 
          if(numChildren >= 0) {
-            sb.append("Kids = ?, ");
+            if(param_count > 0) sb.append("AND ");
+            param_count++;
+            sb.append("Kids = ? ");
             params.add(numChildren);
          }
 
          if(numAdults >= 0) {
+            if(param_count > 0) sb.append("AND ");
+            param_count++;
+
             sb.append("Adults = ? ");
             params.add(numAdults);
          }
@@ -232,7 +245,9 @@ public class Requirements {
          
          sb.append("WHERE CODE = ?;");
          params.add(resCode);
-
+         
+         conn.setAutoCommit(false);
+         if(param_count == 0) return;
          try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
             int i = 1;
             for (Object p : params) {
@@ -240,14 +255,52 @@ public class Requirements {
             }
             
             int res = pstmt.executeUpdate();
-            System.out.format("UPDATE PROBS WENT THROUGH, %d\n", res);
-
+            /* Check if any of the dates overlap, rollback if true */
+            
+            sb = new StringBuilder("select * from");
+			   sb.append("(select * from lab7_reservations as r1 ");
+			   sb.append("where code = ?) dates ");
+			   sb.append("inner join ");
+			   sb.append("(select * from lab7_reservations as r2 ");
+			   sb.append("where code != ?) others ");
+			   sb.append("on (dates.checkin < others.checkout) and (dates.checkout > others.checkin) and dates.room = others.room;"); 
+            params = new ArrayList<Object>();
+            params.add(resCode);
+            params.add(resCode);
+            /* Check if nothing was returned */
+            if(!(execute_query_r3(conn, sb, params))) {
+               System.out.format("UPDATE PROBS WENT THROUGH, %d\n", res);
+               conn.commit();
+            }
+            else {
+               System.out.println("DATES CONFLICTED");
+               conn.rollback();
+            }
+            
             
          }
       }
 
    }
    
+   private boolean execute_query_r3(Connection conn, StringBuilder sb, List<Object> params) throws SQLException {
+      
+      try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+         int i = 1;
+         for (Object p : params) {
+            pstmt.setObject(i++, p);
+         }
+         
+         // Try finding any matching room
+         try (ResultSet rs = pstmt.executeQuery()) {
+            System.out.println("Checking for conflicting dates");
+            return rs.next();
+         }
+      }
+      
+   }
+
+
    public void requirement4() throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                         System.getenv("HP_JDBC_USER"),
