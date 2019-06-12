@@ -295,12 +295,10 @@ public class Requirements {
             pstmt.setObject(i++, p);
          }
          
-         System.err.println("here");
          // Try finding any matching room
          try (ResultSet rs = pstmt.executeQuery()) {
             System.out.println("Checking for conflicting dates");
             while (rs.next())
-               System.out.printf("rs %s, other %s\n", resCode, rs.getString("code"));
                if (!resCode.equals(rs.getString("code")))
                   return false;
             return true;
