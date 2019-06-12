@@ -1,5 +1,7 @@
 Tyler Campanile, Evin Killian (tcampani, ekillian)
 
+database created under username ekillian
+
 How to run:
 export the following:
 CLASSPATH=$CLASSPATH:mysql-connector-java-8.0.16:wq-bin.jar:.
