@@ -243,8 +243,17 @@ public class Requirements {
          }
 
          
-         sb.append("WHERE CODE = ?;");
-         params.add(resCode);
+         sb.append("WHERE CODE = ? AND ");
+         sb.append("EXISTS(select * from");
+			sb.append("(select * from lab7_reservations as r1 ");
+			sb.append("where code = ?) dates ");
+			sb.append("inner join ");
+			sb.append("(select * from lab7_reservations as r2 ");
+			sb.append("where code != ?) others ");
+			sb.append("on (dates.checkin < others.checkout) and (dates.checkout > others.checkin) and dates.room = others.room);"); 
+         params.add(resCode); 
+         params.add(resCode); 
+         params.add(resCode); 
          
          conn.setAutoCommit(false);
          if(param_count == 0) return;
@@ -257,28 +266,8 @@ public class Requirements {
             int res = pstmt.executeUpdate();
             /* Check if any of the dates overlap, rollback if true */
             
-            sb = new StringBuilder("select * from");
-			   sb.append("(select * from lab7_reservations as r1 ");
-			   sb.append("where code = ?) dates ");
-			   sb.append("inner join ");
-			   sb.append("(select * from lab7_reservations as r2 ");
-			   sb.append("where code != ?) others ");
-			   sb.append("on (dates.checkin < others.checkout) and (dates.checkout > others.checkin) and dates.room = others.room;"); 
-            params = new ArrayList<Object>();
-            params.add(resCode);
-            params.add(resCode);
-            /* Check if nothing was returned */
-            if(!(execute_query_r3(conn, sb, params))) {
-               System.out.format("UPDATE PROBS WENT THROUGH, %d\n", res);
-               conn.commit();
-            }
-            else {
-               System.out.println("DATES CONFLICTED");
-               conn.rollback();
-            }
-            
-            
-         }
+            conn.commit();
+         } 
       }
 
    }
