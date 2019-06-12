@@ -175,6 +175,11 @@ public class Requirements {
          System.out.print("Enter your reservation code: ");
          String resCode = sc.nextLine();
 
+         if (resCode == null || resCode.length() == 0) {
+            System.out.println("A reservation code is required!");
+            return;
+         }
+
          System.out.println("Fill in new values for each of the following fields\n(ENTER for no change)\n");
 
          System.out.print("First name: ");
@@ -183,10 +188,10 @@ public class Requirements {
          System.out.print("Last name: ");
          String lastName = sc.nextLine();
 
-         System.out.print("Begin date (mm-dd-yyyy): ");
+         System.out.print("Begin date (yyyy-mm-dd): ");
          String startDate = sc.nextLine();
 
-         System.out.print("End date (mm-dd-yyyy): ");
+         System.out.print("End date (yyyy-mm-dd): ");
          String endDate = sc.nextLine();
 
          System.out.print("Number of children (-1 for no change): ");
@@ -207,35 +212,35 @@ public class Requirements {
          }
 
          if (!"".equalsIgnoreCase(lastName)) {
-            if(param_count > 0) sb.append("AND ");
+            if(param_count > 0) sb.append(", ");
             param_count++;
             sb.append("LastName = ? ");
             params.add(lastName);
          }
 
          if (!"".equalsIgnoreCase(startDate)) {
-            if(param_count > 0) sb.append("AND ");
+            if(param_count > 0) sb.append(", ");
             param_count++;
             sb.append("CheckIn = ? ");
             params.add(startDate);
          }
 
          if (!"".equalsIgnoreCase(endDate)) {
-            if(param_count > 0) sb.append("AND ");
+            if(param_count > 0) sb.append(", ");
             param_count++;
             sb.append("CheckOut = ? ");
             params.add(endDate);
          }
 
          if(numChildren >= 0) {
-            if(param_count > 0) sb.append("AND ");
+            if(param_count > 0) sb.append(", ");
             param_count++;
             sb.append("Kids = ? ");
             params.add(numChildren);
          }
 
          if(numAdults >= 0) {
-            if(param_count > 0) sb.append("AND ");
+            if(param_count > 0) sb.append(", ");
             param_count++;
 
             sb.append("Adults = ? ");
@@ -272,7 +277,7 @@ public class Requirements {
 
    }
    
-   private boolean execute_query_r3(Connection conn, StringBuilder sb, List<Object> params) throws SQLException {
+   private boolean execute_query_r3(Connection conn, StringBuilder sb, List<Object> params, String resCode) throws SQLException {
       
       try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
          int i = 1;
@@ -283,10 +288,12 @@ public class Requirements {
          // Try finding any matching room
          try (ResultSet rs = pstmt.executeQuery()) {
             System.out.println("Checking for conflicting dates");
-            return rs.next();
+            while (rs.next())
+               if (!resCode.equals(rs.getString("code")))
+                  return false;
+            return true;
          }
       }
-      
    }
 
 
