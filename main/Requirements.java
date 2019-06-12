@@ -249,18 +249,52 @@ public class Requirements {
 
          
          sb.append("WHERE CODE = ? AND ");
-         sb.append("EXISTS(select * from");
+         sb.append("NOT EXISTS(select * from");
 			sb.append("(select * from lab7_reservations as r1 ");
 			sb.append("where code = ?) dates ");
 			sb.append("inner join ");
 			sb.append("(select * from lab7_reservations as r2 ");
 			sb.append("where code != ?) others ");
-			sb.append("on (dates.checkin < others.checkout) and (dates.checkout > others.checkin) and dates.room = others.room);"); 
+			sb.append("on (");
          params.add(resCode); 
          params.add(resCode); 
          params.add(resCode); 
-         
-         conn.setAutoCommit(false);
+         if(!"".equalsIgnoreCase(startDate)) {
+            sb.append("? ");
+            params.add(startDate);
+         }
+         else {
+            sb.append("dates.checkin ");
+         }
+         sb.append("< others.checkout) and (");
+
+         if(!"".equalsIgnoreCase(endDate)) {
+            sb.append("? ");
+            params.add(endDate);
+         }
+         else {
+            sb.append("dates.checkout ");
+         }
+         sb.append("> others.checkin) and dates.room = others.room "); 
+         sb.append("and ");
+
+         if(!"".equalsIgnoreCase(startDate)) {
+            sb.append("? ");
+            params.add(startDate);
+         }
+         else {
+            sb.append("dates.checkin ");
+         }
+         sb.append("< ");
+
+         if(!"".equalsIgnoreCase(endDate)) {
+            sb.append("? );");
+            params.add(endDate);
+         }
+         else {
+            sb.append("dates.checkout); ");
+         }
+
          if(param_count == 0) return;
          try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
             int i = 1;
@@ -271,7 +305,6 @@ public class Requirements {
             int res = pstmt.executeUpdate();
             /* Check if any of the dates overlap, rollback if true */
             
-            conn.commit();
          } 
       }
 
@@ -305,21 +338,12 @@ public class Requirements {
          System.out.print("Enter your reservation code: ");
          String resCode = sc.nextLine();
 
-         System.out.print("BRUH ARE YOU SURE YOU WANT TO DELETE YOUR RESERVATION?! [Y/n]: ");
+         System.out.print("Are you sure you want to cancel your reservation [Y/n]: ");
          String response = sc.nextLine();
          if(!"Y".equalsIgnoreCase(response)) {
             System.out.println("You won't regret this!");
             return;
          }
-         
-         System.out.print("Bruuuuuuuuuh. You really want to do this... [Y/n]: ");
-         response = sc.nextLine();
-         if(!"Y".equalsIgnoreCase(response)) {
-            System.out.println("I knew you'd change your mind!");
-            return;
-         }
-
-         System.out.println("Fuck it, we didn't want you there anyways");
          
          List<Object> params = new ArrayList<Object>();
 
@@ -333,7 +357,7 @@ public class Requirements {
             }
             
             boolean res = pstmt.execute();
-            
+            System.out.println("Your reservation has been canceled :(");
          }
       }
    }
